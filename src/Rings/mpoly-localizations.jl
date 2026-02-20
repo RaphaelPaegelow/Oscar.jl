@@ -285,6 +285,11 @@ complement_of_point_ideal(R::MPolyRing, a::Vector) = MPolyComplementOfKPointIdea
 Given a prime ideal ``P`` of a multivariate polynomial ring ``R``, say,
 return the multiplicatively closed subset ``R\setminus P.``
 
+Note that for other rings such as quotients and/or localizations of multivariate polynomial 
+rings `complement_of_prime_ideal` will return a multiplicative set in the 
+underlying polynomial ring. This is due to our choice to keep localizations "flat" 
+and to always localize from the top-level polynomial ring. 
+
 !!! note
     If  `check` is set to `true` (default), the function checks whether ``P`` is indeed a prime ideal. 
 
@@ -544,26 +549,26 @@ function issubset(
 end
 
 function issubset(
-    T::MPolyComplementOfKPointIdeal{BRT, BRET, RT, RET},
-    U::MPolyComplementOfPrimeIdeal{BRT, BRET, RT, RET}
-  ) where {BRT, BRET, RT, RET}
-  R = ring(T)
-  R == ring(U) || error("multiplicative sets do not belong to the same ring")
-  a = point_coordinates(T)
-  for i in 1:length(a)
-    (gen(R, i)- R(a[i])) in prime_ideal(U) || return false
-  end
-  return true
-end
-
-function issubset(
     T::MPolyComplementOfPrimeIdeal{BRT, BRET, RT, RET},
     U::MPolyComplementOfKPointIdeal{BRT, BRET, RT, RET}
   ) where {BRT, BRET, RT, RET}
   R = ring(T)
   R == ring(U) || error("multiplicative sets do not belong to the same ring")
   a = point_coordinates(U)
-  for f in gens(prime_ideal(T))
+  for i in 1:length(a)
+    (gen(R, i) - R(a[i])) in prime_ideal(T) || return false
+  end
+  return true
+end
+
+function issubset(
+    T::MPolyComplementOfKPointIdeal{BRT, BRET, RT, RET},
+    U::MPolyComplementOfPrimeIdeal{BRT, BRET, RT, RET}
+  ) where {BRT, BRET, RT, RET}
+  R = ring(T)
+  R == ring(U) || error("multiplicative sets do not belong to the same ring")
+  a = point_coordinates(T)
+  for f in gens(prime_ideal(U))
     iszero(evaluate(f, a)) || return false
   end
   return true
@@ -961,7 +966,7 @@ function localization(
     W::MPolyLocRing{BRT, BRET, RT, RET, MST}, 
     S::AbsMPolyMultSet{BRT, BRET, RT, RET}
   ) where {BRT, BRET, RT, RET, MST}
-  issubset(S, inverted_set(W)) && return W, identity_map(W)
+  issubset(S, inverted_set(W)) && return W, id_hom(W)
   U = S*inverted_set(W)
   L, _ = localization(U)
   #return L, MapFromFunc(W, L, (x->(L(numerator(x), denominator(x), check=false))))
@@ -1927,24 +1932,6 @@ function ideal(
   return MPolyLocalizedIdeal(W, W.(gens(I)))
 end
 
-### additional functionality
-function issubset(I::IdealType, J::IdealType) where {IdealType<:MPolyLocalizedIdeal}
-  base_ring(I) == base_ring(J) || error("ideals do not belong to the same ring")
-  for g in gens(I)
-    g in J || return false
-  end
-  return true
-end
-
-function ==(I::IdealType, J::IdealType) where {IdealType<:MPolyLocalizedIdeal}
-  I === J && return true
-  (issubset(I, J) && issubset(J, I))
-end
-
-function +(I::IdealType, J::IdealType) where {IdealType<:MPolyLocalizedIdeal}
-  return ideal(base_ring(I), vcat(gens(I), gens(J)))
-end
-
 # TODO: The following method can probably be fine tuned for specific localizations.
 function intersect(I::IdealType, J::IdealType) where {IdealType<:MPolyLocalizedIdeal}
   return base_ring(I)(intersect(pre_saturated_ideal(I), pre_saturated_ideal(J)))
@@ -2042,6 +2029,7 @@ function coordinates(
   end
 
   if numerator(a) in pre_saturated_ideal(I) 
+    T = pre_saturation_data(I)
     return transpose(T * transpose(L(one(R), denominator(a), check=false)*map_entries(L, coordinates(numerator(a), pre_saturated_ideal(I)))))
   end
 
@@ -2472,8 +2460,8 @@ defined by
 restricted_map(PHI::MPolyLocalizedRingHom) = PHI.res
 
 ### implementing the Oscar map interface
-function identity_map(W::T) where {T<:MPolyLocRing} 
-  MPolyLocalizedRingHom(W, W, identity_map(base_ring(W)), check=false)
+function id_hom(W::T) where {T<:MPolyLocRing} 
+  MPolyLocalizedRingHom(W, W, id_hom(base_ring(W)), check=false)
 end
 
 function compose(

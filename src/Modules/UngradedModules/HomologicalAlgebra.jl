@@ -178,7 +178,7 @@ function tensor_product(P::ModuleFP, C::Hecke.ComplexOfMorphisms{ModuleFP})
     j = Hecke.map_range(C)[i]
     @assert domain(map(C, j)) === A_fac[2]
     @assert codomain(map(C, j)) === B_fac[2]
-    push!(tensor_chain, hom_tensor(A,B,[identity_map(A_fac[1]), map(C,j)]))
+    push!(tensor_chain, hom_tensor(A,B,[id_hom(A_fac[1]), map(C,j)]))
   end
 
   return Hecke.ComplexOfMorphisms(ModuleFP, tensor_chain, seed=C.seed, typ=C.typ)
@@ -207,7 +207,7 @@ function tensor_product(C::Hecke.ComplexOfMorphisms{<:ModuleFP}, P::ModuleFP)
     B = tensor_modules[i+1]
 
     j = chain_range[i]
-    push!(tensor_chain, hom_tensor(A,B,[map(C,j), identity_map(P)]))
+    push!(tensor_chain, hom_tensor(A,B,[map(C,j), id_hom(P)]))
   end
 
   return Hecke.ComplexOfMorphisms(ModuleFP, tensor_chain, seed=C.seed, typ=C.typ)
@@ -272,7 +272,7 @@ function tor(M::ModuleFP, N::ModuleFP, i::Int)
   return simplify_light(homology(lifted_resolution,i))[1]
 end
 
-simplify_light(F::FreeMod) = (F, identity_map(F), identity_map(F))
+simplify_light(F::FreeMod) = (F, id_hom(F), id_hom(F))
 
 #TODO, mF
 #  (hom lift) => hom and tensor functor
@@ -600,25 +600,26 @@ julia> ext(M, M, 0)
 Subquotient of submodule with 1 generator
   1: (e[1] -> e[1])
 by submodule with 2 generators
-  1: y*(e[1] -> e[1])
-  2: x*(e[1] -> e[1])
+  1: x*(e[1] -> e[1])
+  2: y*(e[1] -> e[1])
 
 julia> ext(M, M, 1)
 Subquotient of submodule with 2 generators
   1: (e[1] -> e[1])
   2: (e[2] -> e[1])
 by submodule with 4 generators
-  1: y*(e[1] -> e[1])
-  2: x*(e[1] -> e[1])
-  3: y*(e[2] -> e[1])
-  4: x*(e[2] -> e[1])
+  1: x*(e[1] -> e[1])
+  2: y*(e[1] -> e[1])
+  3: x*(e[2] -> e[1])
+  4: y*(e[2] -> e[1])
 
 julia> ext(M, M, 2)
 Subquotient of submodule with 1 generator
   1: (e[1] -> e[1])
-by submodule with 2 generators
-  1: y*(e[1] -> e[1])
-  2: x*(e[1] -> e[1])
+by submodule with 3 generators
+  1: x*(e[1] -> e[1])
+  2: y*(e[1] -> e[1])
+  3: -x*(e[1] -> e[1])
 
 julia> ext(M, M, 3)
 Submodule with 0 generators

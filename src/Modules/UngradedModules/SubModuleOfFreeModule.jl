@@ -143,7 +143,6 @@ end
 Get the default ordering of `M`.
 """
 function default_ordering(M::SubModuleOfFreeModule)
-  return default_ordering(ambient_free_module(M))
   if !isdefined(M, :default_ordering)
     ord = default_ordering(ambient_free_module(M))
     set_default_ordering!(M, ord)
@@ -197,7 +196,7 @@ Compute a Gröbner of `submod` with respect to the given `ordering`.
 The ordering must be global. The return type is `ModuleGens`.
 """
 function groebner_basis(submod::SubModuleOfFreeModule, ordering::ModuleOrdering = default_ordering(submod))
-  @assert is_global(ordering)
+  @assert ordering === default_ordering(submod) || is_global(ordering) # The former is always global and thus provides a shortcut.
   return standard_basis(submod, ordering=ordering)
 end
 

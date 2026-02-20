@@ -8,9 +8,10 @@ function _as_subgroup_bare(G::T, H::GapObj) where T <: GAPGroup
   return _oscar_subgroup(H, G)
 end
 
+# Note that `_as_subgroup` does *not* check whether `H` is a subset of `G`.
 function _as_subgroup(G::GAPGroup, H::GapObj)
   H1 = _as_subgroup_bare(G, H)
-  return H1, hom(H1, G, x -> group_element(G, GapObj(x)), x -> group_element(H1, GapObj(x)); is_known_to_be_bijective = false)
+  return H1, GAPGroupEmbedding(H1, G)
 end
 
 """
@@ -37,8 +38,10 @@ function sub(G::GAPGroup, gens::AbstractVector{<: GAPGroupElem}; check::Bool = t
   if check
     @req all(x -> parent(x) === G || x in G, gens) "not all elements of gens lie in G"
   end
+  flag, GapG = has_GapObj_with_GapObj(G)
+  flag || return matrix_group(base_ring(G), degree(G), gens)
   elems_in_GAP = GapObj(gens; recursive = true)
-  H = GAP.Globals.SubgroupNC(GapObj(G), elems_in_GAP)::GapObj
+  H = GAP.Globals.SubgroupNC(GapG, elems_in_GAP)::GapObj
   return _as_subgroup(G, H)
 end
 
@@ -71,24 +74,20 @@ function is_subset(H::GAPGroup, G::GAPGroup)
 end
 
 """
-    is_subgroup(H::GAPGroup, G::GAPGroup)
+    is_subgroup(H::GAPGroup, G::GAPGroup; check::Bool = true)
 
 Return (`true`,`f`) if `H` is a subgroup of `G`, where `f` is the embedding
 homomorphism of `H` into `G`, otherwise return (`false`,`nothing`).
 
+If `check` is `false` then it is not checked whether `H` is a subset of `G`.
+
 If you do not need the embedding then better call
 [`is_subset(H::GAPGroup, G::GAPGroup)`](@ref).
 """
-function is_subgroup(H::GAPGroup, G::GAPGroup)
-   if !is_subset(H, G)
-      return (false, nothing)
-   else
-      # We do not call `_as_subgroup` because we want to store `H`.
-      return (true, hom(H, G,
-                        x -> group_element(G, GapObj(x)),
-                        x -> group_element(H, GapObj(x));
-                        is_known_to_be_bijective = false))
-   end
+function is_subgroup(H::GAPGroup, G::GAPGroup; check::Bool = true)
+   check && !is_subset(H, G) && return (false, nothing)
+   # We do not call `_as_subgroup` because we want to store `H`.
+   return (true, GAPGroupEmbedding(H, G))
 end
 
 """
